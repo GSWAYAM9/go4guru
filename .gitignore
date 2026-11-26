@@ -1,0 +1,39 @@
+# Environments & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.egg-info/
+dist/
+build/
+
+# Node / Next.js / pnpm
+node_modules/
+.pnpm-store/
+.next/
+out/
+.turbo/
+tsconfig.tsbuildinfo
+playwright-report/
+test-results/
+
+# Local storage & OS artifacts
+.DS_Store
+Thumbs.db
+*.log
+tmp/
+quarantine/

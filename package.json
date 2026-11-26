@@ -1,0 +1,18 @@
+{
+  "name": "go4guru-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @go4guru/web dev",
+    "build": "pnpm --filter @go4guru/contracts build && pnpm --filter @go4guru/whiteboard-schema build && pnpm --filter @go4guru/ui build && pnpm --filter @go4guru/web build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "clean": "pnpm -r --if-present clean"
+  }
+}
