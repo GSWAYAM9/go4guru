@@ -28,7 +28,6 @@ from src.modules.classroom.schemas import (
     ClassroomSessionSummaryOut,
     DoubtInterruptRequest,
     DoubtInterruptResponse,
-    LanguageCapabilityOut,
     LessonGenerateRequest,
     LessonPlanOut,
     TTSRequestBody,
@@ -42,20 +41,11 @@ from src.modules.classroom.service import WS_MANAGER, ClassroomService
 classroom_router = APIRouter(prefix="/api/v1/classroom", tags=["classroom"])
 whiteboard_router = APIRouter(prefix="/api/v1/whiteboard", tags=["whiteboard"])
 voice_router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
-languages_router = APIRouter(prefix="/api/v1/languages", tags=["languages"])
 classroom_ws_router = APIRouter(tags=["classroom-ws"])
 
 
 def get_runtime_settings(request: Request) -> Settings:
     return getattr(request.app.state, "settings", get_settings())
-
-
-@languages_router.get("/capabilities", response_model=list[LanguageCapabilityOut])
-async def get_language_capabilities(
-    db: AsyncSession = Depends(get_db_session),  # noqa: B008
-    settings: Settings = Depends(get_runtime_settings),  # noqa: B008
-) -> list[LanguageCapabilityOut]:
-    return await ClassroomService(db, settings).list_language_capabilities()
 
 
 @classroom_router.post(
@@ -247,12 +237,39 @@ async def fetch_cached_voice_audio(
 # ------------------------------------------------------------------
 @classroom_ws_router.websocket("/ws/v1/classroom/{session_id}")
 async def classroom_live_ws(websocket: WebSocket, session_id: UUID) -> None:
-    token = websocket.query_params.get("token", "")
-    if not token:
-        auth_hdr = websocket.headers.get("authorization", "")
-        if auth_hdr.lower().startswith("bearer "):
-            token = auth_hdr.split(" ", 1)[1]
+    import asyncio
+    from src.core.hardening import is_origin_allowed
+
     settings: Settings = getattr(websocket.app.state, "settings", get_settings())
+    origin = websocket.headers.get("origin")
+    if origin and not is_origin_allowed(origin, settings.cors_allowed_origins):
+        await websocket.close(code=1008)
+        return
+
+    token = ""
+    auth_hdr = websocket.headers.get("authorization", "")
+    if auth_hdr.lower().startswith("bearer "):
+        token = auth_hdr.split(" ", 1)[1].strip()
+    elif settings.app_env != "production":
+        token = websocket.query_params.get("token", "").strip()
+
+    raw_protocols = websocket.headers.get("sec-websocket-protocol", "")
+    requested_protocols = [p.strip() for p in raw_protocols.split(",") if p.strip()]
+    accepted_early = False
+
+    if not token and "go4guru.v1" in requested_protocols:
+        await websocket.accept(subprotocol="go4guru.v1")
+        accepted_early = True
+        try:
+            first_frame = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+        except Exception:
+            await websocket.close(code=1008)
+            return
+        if not isinstance(first_frame, dict) or first_frame.get("action") != "auth":
+            await websocket.close(code=1008)
+            return
+        token = str(first_frame.get("token", "")).strip()
+
     try:
         claims = decode_access_token(token, settings=settings)
         caller_id = UUID(str(claims["sub"]))
@@ -287,7 +304,10 @@ async def classroom_live_ws(websocket: WebSocket, session_id: UUID) -> None:
             await websocket.close(code=1008)
             return
 
-    await WS_MANAGER.connect(session_id, websocket)
+    if accepted_early:
+        WS_MANAGER.register(session_id, websocket)
+    else:
+        await WS_MANAGER.connect(session_id, websocket)
     try:
         await websocket.send_json(
             {

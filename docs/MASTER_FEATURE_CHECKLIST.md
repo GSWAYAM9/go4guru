@@ -32,7 +32,7 @@ A feature is marked **`COMPLETED`** ONLY when ALL 12 criteria are verified:
 | `F-039` | 1 | Platform Admin, Feature Flags & Audit Logs | WIP | WIP | DONE | DONE | DONE | DONE | DONE | DONE | `IN_PROGRESS` (Audit logs & role assignment & AI cost summary done; feature flags next) |
 | `F-011` | 2 | Configurable Quiz Engine | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `F-012` | 2 | Server-Authoritative Assessment/Test Engine | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
-| `F-013` | 2 | CBSE Board Prep Workflows & Rubrics | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `IN_PROGRESS` (Configurable CBSE pattern `cbse-2026-v1`, timed mock & objective/numerical breakdowns DONE; subjective rubric grading in Ph 3/7) |
+| `F-013` | 2/9 | CBSE Board Prep Workflows & Rubrics | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Versioned CBSE Sections A–E blueprint `cbse-board-2026-blueprint-v2`, syllabus audit, verified PYQs, formulas, revision plans & `/exams` built; PG18 pytest & full syllabus audit pending) |
 | `F-034` | 2 | Learning-Oriented Analytics & Events | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `F-017` | 3 | Modular AI Teaching Orchestrator | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `F-018` | 3 | Multi-Mode Pedagogical AI Tutor & Doubts | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
@@ -47,17 +47,17 @@ A feature is marked **`COMPLETED`** ONLY when ALL 12 criteria are verified:
 | `F-027` | 5 | Spaced Repetition & Multi-Modal Flashcards | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `F-028` | 5 | Personalized Study Plans & Revision Planner | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `F-035` | 5 | Notification & Alerting System | DONE | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `IN_PROGRESS` (In-app `student_notifications` inbox & triggers for due revision, weak mastery & study plans DONE; email/push dispatch in Ph 7–9) |
-| `F-029` | 6 | Homework AI (Upload, OCR, Analysis, Hints) | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-031` | 7 | Teacher Dashboard, Assignments & Grading | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-032` | 7 | Mentor Dashboard, Goals & Interventions | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-004` | 8 | Parent Consent & Privacy-Preserving Linking | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-033` | 8 | Parent/Guardian Dashboard & Summaries | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-003` | 9 | Multi-Tenant School & Institution Management | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-036` | 9 | Subscriptions, Entitlements, Quotas & Billing | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-014` | 10 | JEE Main Preparation Ecosystem | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-015` | 10 | JEE Advanced Preparation Ecosystem | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-016` | 10 | NEET Preparation Ecosystem | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
-| `F-025` | 11 | Multilingual System & Capability Registry | WIP | DONE | DONE | DONE | DONE | DONE | DONE | DONE | `IN_PROGRESS` (`language_capabilities` table, honest TTS/subtitle matrix & classroom language controls DONE; full localization QA in Ph 11) |
+| `F-029` | 6 | Homework AI (Upload, OCR, Analysis, Hints) | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Full Phase 6 backend, migration `0007`, `/homework` UI, Vitest + node:test + Python syntax/file-security verified; backend pytest + PG18 run pending Python 3.12/PG18 host) |
+| `F-031` | 7 | Teacher Dashboard, Assignments & Grading | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Classes, sections, enrollments, Question Bank, assignments, AI grading + Teacher Override, analytics & CSV export built; unit/Vitest/browser verified; PG18 pytest pending host run) |
+| `F-032` | 7 | Mentor Dashboard, Goals & Interventions | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Assigned roster, progress/weakness review, goals, sessions, follow-ups & interventions built; unit/Vitest/browser verified; PG18 pytest pending host run) |
+| `F-004` | 7/8 | Parent Consent & Privacy-Preserving Linking | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Hashed consent code verification, revocation & hard-locked raw AI transcript exclusion built; unit/Vitest/browser verified; PG18 pytest pending host run) |
+| `F-033` | 7/8 | Parent/Guardian Dashboard & Summaries | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Verified learning summaries, weak topics, revision, homework counts, upcoming tests, goals & privacy toggles built; unit/Vitest/browser verified; PG18 pytest pending host run) |
+| `F-003` | 8 | Multi-Tenant School & Institution Management | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Orgs, schools, branches, academic years, batches, staff/enrollments, tests, reports/CSV & backend tenant guards built; unit/Vitest/browser verified; PG18 cross-tenant isolation pytest pending host run) |
+| `F-036` | 8 | Subscriptions, Entitlements, Quotas & Billing | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Seeded plans, tenant subscriptions & backend seat/teacher/branch quota enforcement built; unit/Vitest/browser verified; PG18 pytest pending host run) |
+| `F-014` | 9 | JEE Main Preparation Ecosystem | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Versioned NTA PCM `+4/-1` patterns, optional section attempt cap, syllabus weightages, strict verified-PYQ explorer, timed mocks, pacing analytics, formulas & revision plans built; PG18 pytest & full dataset audit pending) |
+| `F-015` | 9 | JEE Advanced Preparation Ecosystem | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Versioned `jee_adv_partial` `+4/+3/+2/+1/0/-2`, matrix/match & integer scoring, syllabus weightages, verified PYQs, timed mocks, analytics, formulas & revision plans built; PG18 pytest & full dataset audit pending) |
+| `F-016` | 9 | NEET Preparation Ecosystem | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Versioned NEET `+4/-1` mandatory & optional Sec-B 10/15 blueprints, 60s/Q pacing diagnostics, syllabus weightages, verified PYQs, timed mocks, formulas & revision plans built; PG18 pytest & full dataset audit pending) |
+| `F-025` | 10 | Multilingual System & Capability Registry | DONE | DONE | DONE | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (14-language empirical registry, 6 independent modalities, UI localization + Urdu RTL/LTR math, bilingual STEM glossary, notation preservation, translation review, TTS/STT fallback, quality evals & `/languages` UI built; PG18 pytest & native academic QA pending) |
 | `F-040` | 12 | Mobile & Offline-Safe Scale Readiness | — | — | — | — | — | — | — | Spec | `NOT_STARTED` |
 
 ---
@@ -73,12 +73,14 @@ A feature is marked **`COMPLETED`** ONLY when ALL 12 criteria are verified:
 | `P0-05` | 0 | API Versioning (`/api/v1`, `/ws/v1` stub) & Live/Ready Probes (`503` on down) | DONE | DONE | N/A | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `P0-06` | 0 | Security Baseline (Argon2id, Pinned JWT, Headers, CORS, CSV Sanitizer) | N/A | DONE | N/A | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
 | `P0-07` | 0 | Shared TS Packages, Worker Bootstrap, CI Workflow & Docker Topology | DONE | DONE | N/A | DONE | DONE | DONE | DONE | DONE | `COMPLETED` |
+| `P11-01` | 11 | Production Readiness Audit (34 Domains) & Release Hardening | DONE | DONE | WIP | DONE | DONE | DONE | WIP | DONE | `IN_PROGRESS` (Report complete & 8 security/hardening fixes verified; 6 Critical ops/DB/RLS/worker/legal/load blockers remain Open — **NO-GO for Prod**) |
 
 ---
 
 ## Summary Counts
 - **Phase 0 Foundation Deliverables:** 7 / 7 `COMPLETED`
+- **Phase 11 Release Hardening:** `IN_PROGRESS` (**NOT READY FOR PRODUCTION** — see [docs/PHASE_11_PRODUCTION_READINESS_REPORT.md](PHASE_11_PRODUCTION_READINESS_REPORT.md))
 - **Total Master Product Features (`F-001`–`F-040`):** 40
 - **Completed:** 23 (`F-001`, `F-002`, `F-005`, `F-007`, `F-008`, `F-009`, `F-010`, `F-011`, `F-012`, `F-017`, `F-018`, `F-019`, `F-020`, `F-021`, `F-022`, `F-023`, `F-024`, `F-026`, `F-027`, `F-028`, `F-030`, `F-034`, `F-037`)
-- **In Progress:** 5 (`F-013`, `F-025`, `F-035`, `F-038`, `F-039`)
-- **Not Started:** 12 (`F-006` CMS item authoring + Phases 6–12 remaining features)
+- **In Progress:** 15 (`F-003`, `F-004`, `F-013`, `F-014`, `F-015`, `F-016`, `F-025`, `F-029`, `F-031`, `F-032`, `F-033`, `F-035`, `F-036`, `F-038`, `F-039`)
+- **Not Started:** 2 (`F-006`, `F-040`)

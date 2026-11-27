@@ -247,15 +247,90 @@ __all__ = [
     "MODULE_STATUS",
     "ConceptGraphSnapshot",
     "ConceptNodeContract",
+    "CurriculumCatalogMaps",
+    "ExamTrackContract",
     "ResolvedCurriculumContext",
     "ResolvedTutorCurriculumContract",
     "curriculum_router",
     "get_chapter_and_subject_labels",
     "get_concept_graph_snapshot",
+    "get_curriculum_catalog_maps",
+    "get_exam_track_by_code",
     "get_exam_tracks_map",
+    "list_exam_tracks_contracts",
     "resolve_hierarchy_by_names",
     "resolve_tutor_curriculum_context",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class ExamTrackContract:
+    """Read-only contract describing a canonical examination track."""
+
+    id: UUID
+    code: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class CurriculumCatalogMaps:
+    """Read-only ID->label maps across subjects, chapters, topics, and concepts."""
+
+    subjects: dict[UUID, str]
+    chapters: dict[UUID, str]
+    chapter_subject_ids: dict[UUID, UUID]
+    topics: dict[UUID, str]
+    chapter_topics: dict[UUID, tuple[tuple[UUID, str], ...]]
+    concepts: dict[UUID, str]
+
+
+async def list_exam_tracks_contracts(db: AsyncSession) -> list[ExamTrackContract]:
+    """Return all registered examination tracks ordered cleanly."""
+    rows = (await db.scalars(select(ExamTrack).order_by(ExamTrack.code.asc()))).all()
+    return [ExamTrackContract(id=r.id, code=r.code, name=r.name) for r in rows]
+
+
+async def get_exam_track_by_code(db: AsyncSession, code: str) -> ExamTrackContract | None:
+    """Resolve an ExamTrack by canonical code (case-insensitive)."""
+    norm = code.strip().upper()
+    row = await db.scalar(select(ExamTrack).where(ExamTrack.code == norm))
+    if row is None:
+        return None
+    return ExamTrackContract(id=row.id, code=row.code, name=row.name)
+
+
+async def get_curriculum_catalog_maps(db: AsyncSession) -> CurriculumCatalogMaps:
+    """Return read-only label and parent maps across subjects, chapters, topics, concepts."""
+    subj_rows = (await db.scalars(select(Subject))).all()
+    subjects = {s.id: s.name for s in subj_rows}
+
+    chap_rows = (
+        await db.execute(select(Chapter.id, Chapter.title, Book.subject_id).join(Book, Chapter.book_id == Book.id))
+    ).all()
+    chapters: dict[UUID, str] = {}
+    chapter_subject_ids: dict[UUID, UUID] = {}
+    for cid, ctitle, sid in chap_rows:
+        chapters[cid] = ctitle
+        chapter_subject_ids[cid] = sid
+
+    topic_rows = (await db.scalars(select(Topic).order_by(Topic.sequence_no.asc(), Topic.title.asc()))).all()
+    topics: dict[UUID, str] = {}
+    chap_topics_mut: dict[UUID, list[tuple[UUID, str]]] = {}
+    for t in topic_rows:
+        topics[t.id] = t.title
+        chap_topics_mut.setdefault(t.chapter_id, []).append((t.id, t.title))
+
+    concept_rows = (await db.scalars(select(Concept))).all()
+    concepts = {c.id: c.title for c in concept_rows}
+
+    return CurriculumCatalogMaps(
+        subjects=subjects,
+        chapters=chapters,
+        chapter_subject_ids=chapter_subject_ids,
+        topics=topics,
+        chapter_topics={k: tuple(v) for k, v in chap_topics_mut.items()},
+        concepts=concepts,
+    )
 
 
 @dataclass(frozen=True, slots=True)

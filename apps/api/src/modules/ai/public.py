@@ -16,11 +16,26 @@ from src.modules.ai.pedagogy import (
     run_deterministic_verification_for_query,
     synthesize_grounded_fallback,
 )
+from src.modules.ai.provider import (
+    AIRouterGateway,
+    ProviderInvocationRequest,
+    ProviderInvocationResult,
+)
 from src.modules.ai.resolvers import classify_intent, resolve_student_context
 from src.modules.ai.retrieval import HybridRetrievalService
 from src.modules.ai.router import ai_admin_router, ai_router
-from src.modules.ai.safety import evaluate_input_safety, scrub_pii_text
-from src.modules.ai.schemas import CurriculumContext
+from src.modules.ai.safety import (
+    evaluate_input_safety,
+    evaluate_output_safety,
+    scrub_pii_text,
+)
+from src.modules.ai.schemas import CurriculumContext, SafetyVerdict, VerificationCheckResult
+from src.modules.ai.verifier import (
+    check_algebraic_equivalence,
+    verify_chemical_equation,
+    verify_math_expression,
+    verify_physics_units,
+)
 
 MODULE_NAME = "ai"
 MODULE_PHASE = "Phase 3"
@@ -102,9 +117,22 @@ __all__ = [
     "MODULE_NAME",
     "MODULE_PHASE",
     "MODULE_STATUS",
+    "AIRouterGateway",
     "ClassroomDoubtAnswerContract",
+    "CurriculumContext",
+    "ProviderInvocationRequest",
+    "ProviderInvocationResult",
+    "SafetyVerdict",
+    "VerificationCheckResult",
     "ai_admin_router",
     "ai_router",
+    "check_algebraic_equivalence",
+    "evaluate_input_safety",
+    "evaluate_output_safety",
     "resolve_classroom_doubt_answer",
     "run_golden_evaluation_suite",
+    "scrub_pii_text",
+    "verify_chemical_equation",
+    "verify_math_expression",
+    "verify_physics_units",
 ]

@@ -21,7 +21,7 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const SESSION_KEY = "go4guru_access_session_v1";
+const LEGACY_SESSION_KEY = "go4guru_access_session_v1";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
@@ -30,18 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState<boolean>(true);
 
   const setSession = useCallback((resp: AuthTokenResponse) => {
+    // Keep short-lived access JWT strictly in React state memory (never in Web Storage).
     setToken(resp.access_token);
     setUser(resp.user);
     setMfaRequired(resp.mfa_required);
     if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify({
-          access_token: resp.access_token,
-          user: resp.user,
-          mfa_required: resp.mfa_required,
-        })
-      );
+      try {
+        window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
+      } catch {
+        // Ignore restricted storage environments
+      }
     }
   }, []);
 
@@ -51,7 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setMfaRequired(false);
     if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(SESSION_KEY);
+      try {
+        window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
+      } catch {
+        // Ignore restricted storage environments
+      }
     }
     if (activeToken) {
       try {
@@ -66,27 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     async function restore() {
       if (typeof window !== "undefined") {
-        const cached = window.sessionStorage.getItem(SESSION_KEY);
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached) as {
-              access_token: string;
-              user: UserSummary;
-              mfa_required: boolean;
-            };
-            if (active) {
-              setToken(parsed.access_token);
-              setUser(parsed.user);
-              setMfaRequired(parsed.mfa_required);
-              setInitializing(false);
-              return;
-            }
-          } catch {
-            window.sessionStorage.removeItem(SESSION_KEY);
-          }
+        try {
+          window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
+        } catch {
+          // Ignore restricted storage environments
         }
       }
       try {
+        // Restore session exclusively through the HttpOnly rotating refresh cookie.
         const refreshed = await refreshAuthSession();
         if (active) {
           setSession(refreshed);

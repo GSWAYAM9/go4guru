@@ -126,6 +126,7 @@ class UserProfileResponse(BaseModel):
     preferred_subtitle_language: str
     preferred_question_language: str
     preferred_answer_language: str
+    bilingual_explanation_mode: str = "bilingual_stem_en"
 
 
 class UserProfileUpdateRequest(BaseModel):
@@ -139,6 +140,9 @@ class UserProfileUpdateRequest(BaseModel):
     preferred_subtitle_language: str | None = Field(default=None, min_length=2, max_length=16)
     preferred_question_language: str | None = Field(default=None, min_length=2, max_length=16)
     preferred_answer_language: str | None = Field(default=None, min_length=2, max_length=16)
+    bilingual_explanation_mode: (
+        Literal["monolingual", "bilingual_stem_en", "side_by_side"] | None
+    ) = None
 
 
 class StudentProfileResponse(BaseModel):

@@ -140,10 +140,12 @@ export default function ClassroomPage() {
     let closed = false;
     let socket: WebSocket | null = null;
     try {
-      socket = new WebSocket(buildClassroomWsUrl(activeSessionId, token));
+      socket = new WebSocket(buildClassroomWsUrl(activeSessionId), ["go4guru.v1"]);
       wsRef.current = socket;
       socket.onopen = () => {
-        if (!closed) setWsConnected(true);
+        if (!closed && socket) {
+          socket.send(JSON.stringify({ action: "auth", token }));
+        }
       };
       socket.onclose = () => {
         if (!closed) setWsConnected(false);
@@ -157,6 +159,9 @@ export default function ClassroomPage() {
             type?: string;
             playback_speed?: number;
           };
+          if (msg.type === "session.state" && !closed) {
+            setWsConnected(true);
+          }
           if (msg.type === "session.sync" && token) {
             getClassroomSession(token, activeSessionId)
               .then((detail) => setActiveSession(detail))

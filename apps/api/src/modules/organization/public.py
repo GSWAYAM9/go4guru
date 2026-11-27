@@ -1,5 +1,16 @@
-"""Public contract boundary for organization module (activated in Phase 9)."""
+"""Public contract boundary for organization module (Phase 8 F-003)."""
+
+from __future__ import annotations
+
+from src.modules.organization.router import organization_router
 
 MODULE_NAME = "organization"
-MODULE_PHASE = "Phase 9"
-MODULE_STATUS = "NOT_IMPLEMENTED"
+MODULE_PHASE = "Phase 8"
+MODULE_STATUS = "IMPLEMENTED"
+
+__all__ = [
+    "MODULE_NAME",
+    "MODULE_PHASE",
+    "MODULE_STATUS",
+    "organization_router",
+]

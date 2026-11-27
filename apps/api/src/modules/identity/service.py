@@ -478,6 +478,7 @@ class IdentityService:
             preferred_subtitle_language=profile.preferred_subtitle_language,
             preferred_question_language=profile.preferred_question_language,
             preferred_answer_language=profile.preferred_answer_language,
+            bilingual_explanation_mode=profile.bilingual_explanation_mode,
         )
 
     async def update_me_profile(

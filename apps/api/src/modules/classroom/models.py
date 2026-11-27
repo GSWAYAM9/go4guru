@@ -40,12 +40,33 @@ class LanguageCapability(TimestampMixin, Base):
     language_code: Mapped[str] = mapped_column(String(16), primary_key=True)
     display_name: Mapped[str] = mapped_column(String(64), nullable=False)
     native_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    script_name: Mapped[str] = mapped_column(
+        String(32), server_default=text("'Latin'"), nullable=False
+    )
     rtl: Mapped[bool] = mapped_column(Boolean, server_default=text("false"), nullable=False)
+    capability_status: Mapped[str] = mapped_column(
+        String(24), server_default=text("'beta'"), nullable=False
+    )
+    testing_status: Mapped[str] = mapped_column(
+        String(24), server_default=text("'pending'"), nullable=False
+    )
+    availability_status: Mapped[str] = mapped_column(
+        String(32), server_default=text("'limited'"), nullable=False
+    )
     text_quality_tier: Mapped[str] = mapped_column(
         String(32), server_default=text("'tier_2_beta'"), nullable=False
     )
     translation_status: Mapped[str] = mapped_column(
         String(32), server_default=text("'pending'"), nullable=False
+    )
+    ui_supported: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False
+    )
+    explanation_supported: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("true"), nullable=False
+    )
+    bilingual_supported: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("true"), nullable=False
     )
     tts_supported: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False
@@ -54,12 +75,30 @@ class LanguageCapability(TimestampMixin, Base):
         Boolean, server_default=text("false"), nullable=False
     )
     voice_provider: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    stt_provider: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    translation_provider: Mapped[str | None] = mapped_column(String(48), nullable=True)
     pronunciation_tier: Mapped[str | None] = mapped_column(String(32), nullable=True)
     subtitle_supported: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False
     )
+    question_supported: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False
+    )
+    answer_supported: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False
+    )
     academic_review_status: Mapped[str] = mapped_column(
         String(32), server_default=text("'pending'"), nullable=False
+    )
+    fallback_language_code: Mapped[str] = mapped_column(
+        String(16), server_default=text("'en'"), nullable=False
+    )
+    quality_score_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_evaluated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    provider_matrix_jsonb: Mapped[dict[str, Any]] = mapped_column(
+        JSONBVariant, server_default=text("'{}'::jsonb"), nullable=False
     )
     known_limitations: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -264,6 +303,9 @@ class VoiceUsageLog(UUIDPrimaryKeyMixin, Base):
         nullable=True,
     )
     provider: Mapped[str] = mapped_column(String(48), nullable=False)
+    operation_type: Mapped[str] = mapped_column(
+        String(16), server_default=text("'tts'"), nullable=False
+    )
     voice_id: Mapped[str] = mapped_column(String(96), nullable=False)
     language_code: Mapped[str] = mapped_column(String(16), nullable=False)
     characters_count: Mapped[int] = mapped_column(Integer, server_default=text("0"), nullable=False)

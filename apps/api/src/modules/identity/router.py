@@ -15,6 +15,8 @@ from src.core.auth_context import (
 )
 from src.core.config import Settings, get_settings
 from src.core.errors import AppError
+from src.core.hardening import is_origin_allowed
+from src.core.rate_limit import enforce_auth_rate_limit
 from src.modules.identity.repository import IdentityRepository
 from src.modules.identity.schemas import (
     AssignRoleRequest,
@@ -68,6 +70,7 @@ async def register_user(
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ) -> AuthTokenResponse:
     settings: Settings = getattr(request.app.state, "settings", get_settings())
+    await enforce_auth_rate_limit(request, scope="auth_register", subject=payload.email)
     ip, ua = _client_meta(request)
     svc = IdentityService(db, settings)
     auth_resp, raw_refresh = await svc.register(payload, ip_addr=ip, user_agent=ua)
@@ -83,6 +86,7 @@ async def login_user(
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ) -> AuthTokenResponse:
     settings: Settings = getattr(request.app.state, "settings", get_settings())
+    await enforce_auth_rate_limit(request, scope="auth_login", subject=payload.email)
     ip, ua = _client_meta(request)
     svc = IdentityService(db, settings)
     auth_resp, raw_refresh = await svc.login(payload, ip_addr=ip, user_agent=ua)
@@ -98,9 +102,18 @@ async def refresh_session(
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ) -> AuthTokenResponse:
     settings: Settings = getattr(request.app.state, "settings", get_settings())
-    raw_refresh = (
-        payload.refresh_token if payload and payload.refresh_token else None
-    ) or request.cookies.get(settings.refresh_cookie_name)
+    await enforce_auth_rate_limit(request, scope="auth_refresh")
+    body_token = payload.refresh_token if payload and payload.refresh_token else None
+    cookie_token = request.cookies.get(settings.refresh_cookie_name)
+    if not body_token and cookie_token:
+        origin = request.headers.get("Origin")
+        if origin and not is_origin_allowed(origin, settings.cors_allowed_origins):
+            raise AppError(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="ORIGIN_NOT_ALLOWED",
+                message="Cross-origin cookie refresh request rejected.",
+            )
+    raw_refresh = body_token or cookie_token
     ip, ua = _client_meta(request)
     svc = IdentityService(db, settings)
     auth_resp, next_refresh = await svc.refresh(raw_refresh, ip_addr=ip, user_agent=ua)
@@ -141,6 +154,7 @@ async def verify_mfa(
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ) -> AuthTokenResponse:
     settings: Settings = getattr(request.app.state, "settings", get_settings())
+    await enforce_auth_rate_limit(request, scope="auth_mfa_verify", subject=str(caller.id))
     ip, ua = _client_meta(request)
     svc = IdentityService(db, settings)
     auth_resp, raw_refresh = await svc.verify_mfa(caller, payload.code, ip_addr=ip, user_agent=ua)

@@ -64,7 +64,12 @@ export function MathText({
         return (
           <span
             key={idx}
-            className={seg.kind === "display" ? "my-2 block overflow-x-auto" : "inline-block align-baseline"}
+            dir="ltr"
+            className={
+              seg.kind === "display"
+                ? "my-2 block overflow-x-auto text-left"
+                : "inline-block align-baseline"
+            }
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );

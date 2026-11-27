@@ -41,12 +41,14 @@ class AppError(Exception):
         code: str,
         message: str,
         details: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
         self.message = message
         self.details = details
+        self.headers = headers
 
 
 def build_error_response(
@@ -56,6 +58,7 @@ def build_error_response(
     message: str,
     details: Any = None,
     request_id: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     """Create a JSONResponse matching the standard API error envelope."""
     rid = request_id or request_id_ctx_var.get()
@@ -67,7 +70,7 @@ def build_error_response(
             request_id=rid,
         )
     )
-    return JSONResponse(status_code=status_code, content=envelope.model_dump())
+    return JSONResponse(status_code=status_code, content=envelope.model_dump(), headers=headers)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -82,6 +85,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             message=exc.message,
             details=exc.details,
             request_id=rid,
+            headers=exc.headers,
         )
 
     @app.exception_handler(StarletteHTTPException)

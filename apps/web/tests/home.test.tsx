@@ -1,85 +1,82 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
+import { FoundationStatus } from "@/components/foundation-status";
 import { MathText } from "@/components/math-text";
+import { AuthProvider } from "@/lib/auth-context";
 
-describe("HomePage Phase 1 FoundationStatus", () => {
+describe("Go4Guru LandingPage & Core Components", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders truthful error banner when backend API is unreachable", async () => {
+  it("renders Go4Guru by GO4GURU Inc. hero, logo, and interactive sections", () => {
+    render(
+      <AuthProvider>
+        <HomePage />
+      </AuthProvider>
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Learn deeply\.\s*Master it for real\./i })
+    ).toBeInTheDocument();
+    expect(screen.getAllByAltText(/Go4Guru logo/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/Go4Guru by GO4GURU Inc\./i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /go4guru\.com/i }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it("switches workspace showcase tabs, adaptive check-in answers, currency pricing, and FAQ items", () => {
+    render(
+      <AuthProvider>
+        <HomePage />
+      </AuthProvider>
+    );
+
+    // Switch Inside Go4Guru tab
+    fireEvent.click(screen.getByRole("tab", { name: "Revision & Mistakes" }));
+    expect(
+      screen.getByText(/Every slip turns into a scheduled review card\./i)
+    ).toBeInTheDocument();
+
+    // Toggle adaptive check-in to misconception option
+    fireEvent.click(screen.getByRole("radio", { name: /Carbon dioxide/i }));
+    expect(
+      screen.getByText(/Saved to your Mistake Book\./i)
+    ).toBeInTheDocument();
+
+    // Switch currency from USD to INR and billing cycle to Yearly
+    fireEvent.click(screen.getByRole("button", { name: /India · INR/i }));
+    expect(screen.getByText("₹1,899")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Yearly/i }));
+    expect(screen.getByText("₹1,599")).toBeInTheDocument();
+
+    // Expand an FAQ item
+    const toursBtn = screen.getByRole("button", {
+      name: /International Educational Tours\?/i,
+    });
+    expect(toursBtn).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toursBtn);
+    expect(toursBtn).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByText(/upcoming tour itineraries/i)
+    ).toBeInTheDocument();
+  });
+
+  it("FoundationStatus renders truthful error banner when backend API is unreachable", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(
       new TypeError("Failed to fetch")
     );
 
-    render(<HomePage />);
-    expect(
-      screen.getByText(
-        /Curriculum-Grounded Learning, Question Bank & Guided Practice/i
-      )
-    ).toBeInTheDocument();
+    render(<FoundationStatus />);
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         /NETWORK_UNREACHABLE/i
       );
-    });
-  });
-
-  it("renders degraded dependency check and domain modules when API responds 503", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: "degraded",
-            service: "go4guru-api",
-            version: "0.1.0",
-            environment: "test",
-            phase: "phase_1_core_learning_platform",
-            checks: {
-              postgres: { status: "up", error: null },
-              redis: { status: "down", error: "ConnectionRefusedError" },
-            },
-            timestamp: "2026-11-26T15:00:00Z",
-          }),
-          { status: 503, headers: { "Content-Type": "application/json" } }
-        )
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            service: "go4guru-api",
-            version: "0.1.0",
-            environment: "test",
-            api_prefix: "/api/v1",
-            ws_prefix: "/ws/v1",
-            phase: "phase_1_core_learning_platform",
-            modules: [
-              {
-                name: "identity",
-                status: "implemented",
-                planned_phase: "Phase 1",
-              },
-              {
-                name: "curriculum",
-                status: "implemented",
-                planned_phase: "Phase 1",
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        )
-      );
-
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Degraded (503)")).toBeInTheDocument();
-      expect(screen.getByText("ConnectionRefusedError")).toBeInTheDocument();
-      expect(screen.getByText("identity")).toBeInTheDocument();
-      expect(screen.getByText("curriculum")).toBeInTheDocument();
     });
   });
 

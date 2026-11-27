@@ -1,5 +1,6 @@
 import type {
   AcademicSessionOut,
+  AcademicYearOut,
   AdaptiveOverviewOut,
   AiCostSummaryResponse,
   AiEvalRunResponse,
@@ -10,15 +11,22 @@ import type {
   AiTurnResponse,
   AiUsageQuotaResponse,
   ApiMetaResponse,
+  AssignmentSubmissionOut,
+  AttemptDetailedSolutionsResponse,
   AttemptHistoryItem,
   AttemptResultOut,
   AttemptResultResponse,
   AttemptStateResponse,
   AuthTokenResponse,
   AutosaveResponse,
+  BatchEnrollmentOut,
+  BilingualMode,
+  BilingualPreviewResponse,
   BoardOut,
   BookmarkOut,
+  BranchOut,
   CheckpointSubmitResponse,
+  ClassEnrollmentOut,
   ClassroomSessionDetailOut,
   ClassroomSessionSummaryOut,
   ClassroomWhiteboardAction,
@@ -30,26 +38,59 @@ import type {
   CurriculumVersionOut,
   DoubtInterruptResponse,
   ErrorEnvelope,
+  ExamAnalyticsResponse,
+  ExamFormulaOut,
   ExamPatternOut,
+  ExamQuestionsExplorerResponse,
+  ExamRevisionPlanOut,
+  ExamSyllabusChapterOut,
+  ExamSyllabusResponse,
+  ExamTrackOverviewOut,
   FlashcardOut,
   FlashcardReviewResponse,
   FlashcardType,
+  FormulaVariableItem,
+  GlossaryTermOut,
   GradeOut,
+  GuardianLinkOut,
+  HomeworkEvaluationOut,
+  HomeworkSubmissionDetailOut,
+  HomeworkSubmissionSummaryOut,
+  HomeworkSubjectSelection,
   ImportBatchOut,
   ImportPreviewResponse,
+  InstitutionAssessmentOut,
+  InstitutionBatchOut,
+  InstitutionMemberOut,
+  InstitutionReportOut,
   LanguageCapabilityOut,
+  LanguageQualityEvaluationOut,
+  LaunchedExamAttemptOut,
   LearningPathItemOut,
   LearningPathOut,
   LessonPlanOut,
+  MentorDashboardOut,
+  MentorFollowUpOut,
+  MentorGoalOut,
+  MentorSessionOut,
+  MentorStudentReviewOut,
+  MentorStudentRosterOut,
   MfaSetupResponse,
   MisconceptionOut,
   NotificationOut,
+  OrganizationOut,
+  ParentDashboardOut,
+  ParentGoalOut,
+  ParentLearningSummaryOut,
   PracticeSessionOut,
+  QuestionBankOptionOut,
   QuestionOut,
   QuestionSearchResponse,
   QuizOut,
   ReadinessResponse,
   RevisionAnalyticsOut,
+  STTResponseOut,
+  SchoolOut,
   ScoringRuleContract,
   StudentAnalyticsOverviewResponse,
   StudentDashboardResponse,
@@ -58,11 +99,23 @@ import type {
   StudyPlanItemOut,
   StudyPlanOut,
   SubjectOut,
+  SubscriptionPlanOut,
   SyncMissedResponse,
   TTSResponseOut,
+  TeacherAssignmentOut,
+  TeacherClassAnalyticsOut,
+  TeacherClassOut,
+  TeacherDashboardOut,
+  TeacherSectionOut,
+  TeacherStudentAnalyticsOut,
   TeachingMode,
+  TenantSubscriptionOut,
   TestOut,
+  TranslationEntryOut,
+  UiLocalizationBundleOut,
+  UserLanguagePreferencesOut,
   UserProfileResponse,
+  VoiceProviderStatusOut,
   WhiteboardEventOut,
   WhiteboardSnapshotOut,
 } from "@go4guru/contracts";
@@ -832,9 +885,9 @@ export async function fetchAdminAiCosts(
 // ------------------------------------------------------------------
 // Phase 4: Live Classroom, Language Capability Registry, Whiteboard & Voice
 // ------------------------------------------------------------------
-export function buildClassroomWsUrl(sessionId: string, token: string): string {
+export function buildClassroomWsUrl(sessionId: string): string {
   const base = publicEnv.apiBaseUrl.replace(/^http/i, "ws").replace(/\/+$/, "");
-  return `${base}/ws/v1/classroom/${sessionId}?token=${encodeURIComponent(token)}`;
+  return `${base}/ws/v1/classroom/${encodeURIComponent(sessionId)}`;
 }
 
 export async function fetchLanguageCapabilities(): Promise<
@@ -1211,4 +1264,1244 @@ export async function markNotificationRead(
     `/api/v1/notifications/${notificationId}/read`,
     { method: "POST", token }
   );
+}
+
+// --- Phase 6: Homework AI ---
+
+export async function uploadHomeworkSubmission(
+  token: string,
+  payload: {
+    files: File[];
+    title: string;
+    selected_subject?: HomeworkSubjectSelection;
+    language_code?: string;
+    manual_transcript?: string;
+  }
+): Promise<HomeworkSubmissionDetailOut> {
+  const form = new FormData();
+  for (const file of payload.files) {
+    form.append("files", file, file.name);
+  }
+  form.append("title", payload.title);
+  form.append("selected_subject", payload.selected_subject ?? "auto");
+  form.append("language_code", payload.language_code ?? "en");
+  if (payload.manual_transcript && payload.manual_transcript.trim()) {
+    form.append("manual_transcript", payload.manual_transcript.trim());
+  }
+  return apiFetch<HomeworkSubmissionDetailOut>("/api/v1/homework/submissions", {
+    method: "POST",
+    token,
+    body: form,
+  });
+}
+
+export async function listHomeworkSubmissions(
+  token: string,
+  limit = 30
+): Promise<HomeworkSubmissionSummaryOut[]> {
+  return apiFetch<HomeworkSubmissionSummaryOut[]>(
+    `/api/v1/homework/submissions?limit=${encodeURIComponent(String(limit))}`,
+    { token }
+  );
+}
+
+export async function getHomeworkSubmission(
+  token: string,
+  submissionId: string
+): Promise<HomeworkSubmissionDetailOut> {
+  return apiFetch<HomeworkSubmissionDetailOut>(
+    `/api/v1/homework/submissions/${submissionId}`,
+    { token }
+  );
+}
+
+export async function correctHomeworkOcr(
+  token: string,
+  submissionId: string,
+  payload: {
+    pages: { page_no: number; corrected_text: string }[];
+    subject_override?: HomeworkSubjectSelection | null;
+    re_evaluate?: boolean;
+  }
+): Promise<HomeworkSubmissionDetailOut> {
+  return apiFetch<HomeworkSubmissionDetailOut>(
+    `/api/v1/homework/submissions/${submissionId}/ocr`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function submitHomeworkRetry(
+  token: string,
+  submissionId: string,
+  payload: {
+    revised_work_text: string;
+    student_reflection?: string;
+  }
+): Promise<HomeworkSubmissionDetailOut> {
+  return apiFetch<HomeworkSubmissionDetailOut>(
+    `/api/v1/homework/submissions/${submissionId}/retry`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function unlockHomeworkHint(
+  token: string,
+  submissionId: string,
+  targetLevel?: 1 | 2 | 3
+): Promise<HomeworkEvaluationOut> {
+  return apiFetch<HomeworkEvaluationOut>(
+    `/api/v1/homework/submissions/${submissionId}/hints/unlock`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(targetLevel ? { target_level: targetLevel } : {}),
+    }
+  );
+}
+
+export async function revealHomeworkSolution(
+  token: string,
+  submissionId: string
+): Promise<HomeworkEvaluationOut> {
+  return apiFetch<HomeworkEvaluationOut>(
+    `/api/v1/homework/submissions/${submissionId}/solution/reveal`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ confirm_reveal: true }),
+    }
+  );
+}
+
+// ------------------------------------------------------------------
+// Phase 7: Teacher, Mentor & Parent Ecosystem
+// ------------------------------------------------------------------
+export async function fetchTeacherDashboard(
+  token: string
+): Promise<TeacherDashboardOut> {
+  return apiFetch<TeacherDashboardOut>("/api/v1/teacher/dashboard", { token });
+}
+
+export async function createTeacherClass(
+  token: string,
+  payload: { name: string; grade_label: string; subject_name: string }
+): Promise<TeacherClassOut> {
+  return apiFetch<TeacherClassOut>("/api/v1/teacher/classes", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listTeacherSections(
+  token: string,
+  classId: string
+): Promise<TeacherSectionOut[]> {
+  return apiFetch<TeacherSectionOut[]>(
+    `/api/v1/teacher/classes/${classId}/sections`,
+    { token }
+  );
+}
+
+export async function createTeacherSection(
+  token: string,
+  classId: string,
+  payload: { name: string; code: string; capacity?: number }
+): Promise<TeacherSectionOut> {
+  return apiFetch<TeacherSectionOut>(
+    `/api/v1/teacher/classes/${classId}/sections`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listTeacherClassStudents(
+  token: string,
+  classId: string
+): Promise<ClassEnrollmentOut[]> {
+  return apiFetch<ClassEnrollmentOut[]>(
+    `/api/v1/teacher/classes/${classId}/students`,
+    { token }
+  );
+}
+
+export async function enrollTeacherClassStudent(
+  token: string,
+  classId: string,
+  payload: { student_email: string; section_id?: string | null; roll_no?: string | null }
+): Promise<ClassEnrollmentOut> {
+  return apiFetch<ClassEnrollmentOut>(
+    `/api/v1/teacher/classes/${classId}/students`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listTeacherQuestionBankOptions(
+  token: string,
+  limit = 30
+): Promise<QuestionBankOptionOut[]> {
+  return apiFetch<QuestionBankOptionOut[]>(
+    `/api/v1/teacher/question-bank?limit=${encodeURIComponent(String(limit))}`,
+    { token }
+  );
+}
+
+export async function listTeacherAssignments(
+  token: string,
+  classId?: string
+): Promise<TeacherAssignmentOut[]> {
+  const qs = classId ? `?class_id=${encodeURIComponent(classId)}` : "";
+  return apiFetch<TeacherAssignmentOut[]>(`/api/v1/teacher/assignments${qs}`, {
+    token,
+  });
+}
+
+export async function createTeacherAssignment(
+  token: string,
+  payload: {
+    class_id: string;
+    section_id?: string | null;
+    title: string;
+    instructions?: string;
+    assignment_type: "assignment" | "quiz" | "test";
+    question_ids?: string[];
+    max_marks: number;
+    due_at?: string | null;
+  }
+): Promise<TeacherAssignmentOut> {
+  return apiFetch<TeacherAssignmentOut>("/api/v1/teacher/assignments", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listAssignmentSubmissions(
+  token: string,
+  assignmentId: string
+): Promise<AssignmentSubmissionOut[]> {
+  return apiFetch<AssignmentSubmissionOut[]>(
+    `/api/v1/teacher/assignments/${assignmentId}/submissions`,
+    { token }
+  );
+}
+
+export async function aiGradeSubmission(
+  token: string,
+  submissionId: string
+): Promise<AssignmentSubmissionOut> {
+  return apiFetch<AssignmentSubmissionOut>(
+    `/api/v1/teacher/submissions/${submissionId}/ai-grade`,
+    { method: "POST", token }
+  );
+}
+
+export async function overrideSubmissionGrade(
+  token: string,
+  submissionId: string,
+  payload: {
+    teacher_score: number;
+    teacher_feedback?: string;
+    teacher_override_reason?: string;
+    status?: "teacher_reviewed" | "returned";
+  }
+): Promise<AssignmentSubmissionOut> {
+  return apiFetch<AssignmentSubmissionOut>(
+    `/api/v1/teacher/submissions/${submissionId}/override`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchTeacherClassAnalytics(
+  token: string,
+  classId: string
+): Promise<TeacherClassAnalyticsOut> {
+  return apiFetch<TeacherClassAnalyticsOut>(
+    `/api/v1/teacher/classes/${classId}/analytics`,
+    { token }
+  );
+}
+
+export async function fetchTeacherStudentAnalytics(
+  token: string,
+  studentId: string
+): Promise<TeacherStudentAnalyticsOut> {
+  return apiFetch<TeacherStudentAnalyticsOut>(
+    `/api/v1/teacher/students/${studentId}/analytics`,
+    { token }
+  );
+}
+
+export async function fetchTeacherClassReportCsv(
+  token: string,
+  classId: string
+): Promise<string> {
+  const response = await fetch(
+    `${publicEnv.apiBaseUrl}/api/v1/teacher/classes/${classId}/report.csv`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    }
+  );
+  if (!response.ok) {
+    await parseErrorOrThrow(response);
+  }
+  return response.text();
+}
+
+export async function fetchMentorDashboard(
+  token: string
+): Promise<MentorDashboardOut> {
+  return apiFetch<MentorDashboardOut>("/api/v1/mentor/dashboard", { token });
+}
+
+export async function assignMentorStudent(
+  token: string,
+  payload: { student_email: string; notes?: string }
+): Promise<MentorStudentRosterOut> {
+  return apiFetch<MentorStudentRosterOut>("/api/v1/mentor/students", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchMentorStudentReview(
+  token: string,
+  studentId: string
+): Promise<MentorStudentReviewOut> {
+  return apiFetch<MentorStudentReviewOut>(
+    `/api/v1/mentor/students/${studentId}/review`,
+    { token }
+  );
+}
+
+export async function createMentorGoal(
+  token: string,
+  payload: {
+    student_id: string;
+    title: string;
+    description?: string;
+    target_date?: string | null;
+  }
+): Promise<MentorGoalOut> {
+  return apiFetch<MentorGoalOut>("/api/v1/mentor/goals", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateMentorGoal(
+  token: string,
+  goalId: string,
+  payload: { progress_pct?: number; status?: "active" | "completed" | "paused" }
+): Promise<MentorGoalOut> {
+  return apiFetch<MentorGoalOut>(`/api/v1/mentor/goals/${goalId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createMentorSession(
+  token: string,
+  payload: {
+    student_id: string;
+    scheduled_at: string;
+    duration_minutes?: number;
+    summary_notes?: string;
+    recommendations?: string[];
+    status?: "scheduled" | "completed" | "cancelled";
+  }
+): Promise<MentorSessionOut> {
+  return apiFetch<MentorSessionOut>("/api/v1/mentor/sessions", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createMentorFollowUp(
+  token: string,
+  payload: {
+    student_id: string;
+    session_id?: string | null;
+    title: string;
+    due_date?: string | null;
+  }
+): Promise<MentorFollowUpOut> {
+  return apiFetch<MentorFollowUpOut>("/api/v1/mentor/follow-ups", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateMentorFollowUp(
+  token: string,
+  followUpId: string,
+  payload: { status: "open" | "in_progress" | "completed" }
+): Promise<MentorFollowUpOut> {
+  return apiFetch<MentorFollowUpOut>(`/api/v1/mentor/follow-ups/${followUpId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchParentDashboard(
+  token: string
+): Promise<ParentDashboardOut> {
+  return apiFetch<ParentDashboardOut>("/api/v1/parent/dashboard", { token });
+}
+
+export async function requestGuardianLink(
+  token: string,
+  payload: { student_email: string; relationship_type: "parent" | "guardian" }
+): Promise<GuardianLinkOut> {
+  return apiFetch<GuardianLinkOut>("/api/v1/parent/links", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function verifyGuardianLink(
+  token: string,
+  linkId: string,
+  verificationCode: string
+): Promise<GuardianLinkOut> {
+  return apiFetch<GuardianLinkOut>(`/api/v1/parent/links/${linkId}/verify`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ verification_code: verificationCode }),
+  });
+}
+
+export async function revokeGuardianLink(
+  token: string,
+  linkId: string
+): Promise<GuardianLinkOut> {
+  return apiFetch<GuardianLinkOut>(`/api/v1/parent/links/${linkId}/revoke`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function updateGuardianPrivacy(
+  token: string,
+  linkId: string,
+  payload: {
+    share_learning_summary?: boolean;
+    share_weak_topics?: boolean;
+    share_upcoming_tests?: boolean;
+  }
+): Promise<GuardianLinkOut> {
+  return apiFetch<GuardianLinkOut>(`/api/v1/parent/links/${linkId}/privacy`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchParentStudentSummary(
+  token: string,
+  studentUserId: string
+): Promise<ParentLearningSummaryOut> {
+  return apiFetch<ParentLearningSummaryOut>(
+    `/api/v1/parent/students/${studentUserId}/summary`,
+    { token }
+  );
+}
+
+export async function createParentGoal(
+  token: string,
+  payload: {
+    student_user_id: string;
+    title: string;
+    target_date?: string | null;
+    target_minutes_per_day?: number;
+  }
+): Promise<ParentGoalOut> {
+  return apiFetch<ParentGoalOut>("/api/v1/parent/goals", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateParentGoal(
+  token: string,
+  goalId: string,
+  payload: { status?: "active" | "achieved" | "archived" }
+): Promise<ParentGoalOut> {
+  return apiFetch<ParentGoalOut>(`/api/v1/parent/goals/${goalId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+// ------------------------------------------------------------------
+// Phase 8: Institutional Multi-Tenant Platform & Subscriptions
+// ------------------------------------------------------------------
+export async function listOrganizations(
+  token: string
+): Promise<OrganizationOut[]> {
+  return apiFetch<OrganizationOut[]>("/api/v1/org/organizations", { token });
+}
+
+export async function createOrganization(
+  token: string,
+  payload: {
+    slug: string;
+    name: string;
+    organization_type: "school_group" | "coaching_institute" | "standalone_school";
+    contact_email: string;
+    plan_code?: string;
+  }
+): Promise<OrganizationOut> {
+  return apiFetch<OrganizationOut>("/api/v1/org/organizations", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateOrganizationConfig(
+  token: string,
+  orgId: string,
+  payload: {
+    default_language?: string;
+    allow_ai_tutor?: boolean;
+    allow_homework_ai?: boolean;
+    require_mfa_for_admins?: boolean;
+    allow_parent_portal?: boolean;
+  }
+): Promise<OrganizationOut> {
+  return apiFetch<OrganizationOut>(`/api/v1/org/organizations/${orgId}/config`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listOrgSchools(
+  token: string,
+  orgId: string
+): Promise<SchoolOut[]> {
+  return apiFetch<SchoolOut[]>(`/api/v1/org/organizations/${orgId}/schools`, {
+    token,
+  });
+}
+
+export async function createOrgSchool(
+  token: string,
+  orgId: string,
+  payload: { code: string; name: string; board_code?: string; city?: string }
+): Promise<SchoolOut> {
+  return apiFetch<SchoolOut>(`/api/v1/org/organizations/${orgId}/schools`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listOrgBranches(
+  token: string,
+  orgId: string
+): Promise<BranchOut[]> {
+  return apiFetch<BranchOut[]>(`/api/v1/org/organizations/${orgId}/branches`, {
+    token,
+  });
+}
+
+export async function createOrgBranch(
+  token: string,
+  orgId: string,
+  payload: { school_id: string; code: string; name: string; address?: string }
+): Promise<BranchOut> {
+  return apiFetch<BranchOut>(`/api/v1/org/organizations/${orgId}/branches`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listOrgAcademicYears(
+  token: string,
+  orgId: string
+): Promise<AcademicYearOut[]> {
+  return apiFetch<AcademicYearOut[]>(
+    `/api/v1/org/organizations/${orgId}/academic-years`,
+    { token }
+  );
+}
+
+export async function createOrgAcademicYear(
+  token: string,
+  orgId: string,
+  payload: {
+    school_id: string;
+    label: string;
+    starts_on: string;
+    ends_on: string;
+    is_current?: boolean;
+  }
+): Promise<AcademicYearOut> {
+  return apiFetch<AcademicYearOut>(
+    `/api/v1/org/organizations/${orgId}/academic-years`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listOrgBatches(
+  token: string,
+  orgId: string
+): Promise<InstitutionBatchOut[]> {
+  return apiFetch<InstitutionBatchOut[]>(
+    `/api/v1/org/organizations/${orgId}/batches`,
+    { token }
+  );
+}
+
+export async function createOrgBatch(
+  token: string,
+  orgId: string,
+  payload: {
+    school_id: string;
+    branch_id?: string | null;
+    academic_year_id?: string | null;
+    name: string;
+    grade_label: string;
+    section_name?: string;
+    exam_track?: string;
+    capacity?: number;
+  }
+): Promise<InstitutionBatchOut> {
+  return apiFetch<InstitutionBatchOut>(
+    `/api/v1/org/organizations/${orgId}/batches`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listOrgMembers(
+  token: string,
+  orgId: string
+): Promise<InstitutionMemberOut[]> {
+  return apiFetch<InstitutionMemberOut[]>(
+    `/api/v1/org/organizations/${orgId}/members`,
+    { token }
+  );
+}
+
+export async function addOrgMember(
+  token: string,
+  orgId: string,
+  payload: {
+    user_email: string;
+    member_role: "school_admin" | "teacher" | "mentor" | "student";
+    school_id?: string | null;
+    branch_id?: string | null;
+  }
+): Promise<InstitutionMemberOut> {
+  return apiFetch<InstitutionMemberOut>(
+    `/api/v1/org/organizations/${orgId}/members`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function enrollOrgBatchStudent(
+  token: string,
+  orgId: string,
+  batchId: string,
+  payload: { student_email: string; roll_no?: string | null }
+): Promise<BatchEnrollmentOut> {
+  return apiFetch<BatchEnrollmentOut>(
+    `/api/v1/org/organizations/${orgId}/batches/${batchId}/enrollments`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listOrgAssessments(
+  token: string,
+  orgId: string
+): Promise<InstitutionAssessmentOut[]> {
+  return apiFetch<InstitutionAssessmentOut[]>(
+    `/api/v1/org/organizations/${orgId}/assessments`,
+    { token }
+  );
+}
+
+export async function createOrgAssessment(
+  token: string,
+  orgId: string,
+  payload: {
+    school_id: string;
+    batch_id?: string | null;
+    title: string;
+    kind: "assignment" | "test";
+    due_at?: string | null;
+    max_marks?: number;
+  }
+): Promise<InstitutionAssessmentOut> {
+  return apiFetch<InstitutionAssessmentOut>(
+    `/api/v1/org/organizations/${orgId}/assessments`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchOrgReport(
+  token: string,
+  orgId: string
+): Promise<InstitutionReportOut> {
+  return apiFetch<InstitutionReportOut>(
+    `/api/v1/org/organizations/${orgId}/reports`,
+    { token }
+  );
+}
+
+export async function fetchOrgReportCsv(
+  token: string,
+  orgId: string
+): Promise<string> {
+  const response = await fetch(
+    `${publicEnv.apiBaseUrl}/api/v1/org/organizations/${orgId}/reports.csv`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    }
+  );
+  if (!response.ok) {
+    await parseErrorOrThrow(response);
+  }
+  return response.text();
+}
+
+export async function listSubscriptionPlans(
+  token: string
+): Promise<SubscriptionPlanOut[]> {
+  return apiFetch<SubscriptionPlanOut[]>("/api/v1/billing/plans", { token });
+}
+
+export async function fetchTenantSubscription(
+  token: string,
+  tenantId: string
+): Promise<TenantSubscriptionOut> {
+  return apiFetch<TenantSubscriptionOut>(
+    `/api/v1/billing/tenants/${tenantId}/subscription`,
+    { token }
+  );
+}
+
+export async function updateTenantSubscription(
+  token: string,
+  tenantId: string,
+  payload: {
+    plan_code: string;
+    status?: "trial" | "active" | "past_due" | "cancelled";
+    seat_limit?: number | null;
+  }
+): Promise<TenantSubscriptionOut> {
+  return apiFetch<TenantSubscriptionOut>(
+    `/api/v1/billing/tenants/${tenantId}/subscription`,
+    {
+      method: "PUT",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+// ------------------------------------------------------------------
+// Phase 9: Examination Preparation Ecosystem (CBSE, JEE Main, JEE Adv, NEET)
+// ------------------------------------------------------------------
+
+export async function listExamPrepTracks(
+  token: string
+): Promise<ExamTrackOverviewOut[]> {
+  return apiFetch<ExamTrackOverviewOut[]>("/api/v1/exam-prep/tracks", {
+    token,
+  });
+}
+
+export async function fetchExamSyllabus(
+  token: string,
+  examCode: string,
+  patternVersionLabel?: string
+): Promise<ExamSyllabusResponse> {
+  const qs = patternVersionLabel
+    ? `?pattern_version_label=${encodeURIComponent(patternVersionLabel)}`
+    : "";
+  return apiFetch<ExamSyllabusResponse>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/syllabus${qs}`,
+    { token }
+  );
+}
+
+export async function upsertExamSyllabusChapter(
+  token: string,
+  examCode: string,
+  payload: {
+    pattern_version_label: string;
+    subject_id: string;
+    chapter_id: string;
+    weightage_pct: number;
+    expected_questions: number;
+    priority_tier: "high_yield" | "core" | "optional";
+    syllabus_status: "included" | "reduced" | "excluded";
+    notes?: string | null;
+    audit_verified?: boolean;
+  }
+): Promise<ExamSyllabusChapterOut> {
+  return apiFetch<ExamSyllabusChapterOut>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/syllabus`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function exploreExamQuestions(
+  token: string,
+  examCode: string,
+  params: {
+    verified_pyq_only?: boolean;
+    exam_year?: number | null;
+    exam_session?: string | null;
+    difficulty?: string | null;
+    question_type?: string | null;
+    subject_id?: string | null;
+    chapter_id?: string | null;
+    topic_id?: string | null;
+    limit?: number;
+  } = {}
+): Promise<ExamQuestionsExplorerResponse> {
+  const sp = new URLSearchParams();
+  if (params.verified_pyq_only) sp.set("verified_pyq_only", "true");
+  if (params.exam_year) sp.set("exam_year", String(params.exam_year));
+  if (params.exam_session) sp.set("exam_session", params.exam_session);
+  if (params.difficulty) sp.set("difficulty", params.difficulty);
+  if (params.question_type) sp.set("question_type", params.question_type);
+  if (params.subject_id) sp.set("subject_id", params.subject_id);
+  if (params.chapter_id) sp.set("chapter_id", params.chapter_id);
+  if (params.topic_id) sp.set("topic_id", params.topic_id);
+  if (params.limit) sp.set("limit", String(params.limit));
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  return apiFetch<ExamQuestionsExplorerResponse>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/questions${qs}`,
+    { token }
+  );
+}
+
+export async function launchExamPractice(
+  token: string,
+  examCode: string,
+  payload: {
+    mode: "chapter_practice" | "topic_practice" | "verified_pyq_drill";
+    title?: string;
+    exam_pattern_id?: string | null;
+    subject_id?: string | null;
+    chapter_id?: string | null;
+    topic_id?: string | null;
+    difficulty?: "easy" | "medium" | "hard" | null;
+    question_type?: string | null;
+    exam_year?: number | null;
+    exam_session?: string | null;
+    verified_pyq_only?: boolean;
+    question_count?: number;
+    duration_seconds?: number | null;
+  }
+): Promise<LaunchedExamAttemptOut> {
+  return apiFetch<LaunchedExamAttemptOut>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/practice`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function generateExamMockTest(
+  token: string,
+  examCode: string,
+  payload: {
+    title?: string;
+    exam_pattern_id?: string | null;
+    mock_scope?: "full_mock" | "timed_section_mock";
+    subject_id?: string | null;
+    chapter_id?: string | null;
+    verified_pyq_only?: boolean;
+    seed?: number;
+  }
+): Promise<LaunchedExamAttemptOut> {
+  return apiFetch<LaunchedExamAttemptOut>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/mocks/generate`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchExamAnalytics(
+  token: string,
+  examCode: string
+): Promise<ExamAnalyticsResponse> {
+  return apiFetch<ExamAnalyticsResponse>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/analytics`,
+    { token }
+  );
+}
+
+export async function listExamFormulas(
+  token: string,
+  examCode: string,
+  params: { subject_id?: string; chapter_id?: string; high_yield_only?: boolean } = {}
+): Promise<ExamFormulaOut[]> {
+  const sp = new URLSearchParams();
+  if (params.subject_id) sp.set("subject_id", params.subject_id);
+  if (params.chapter_id) sp.set("chapter_id", params.chapter_id);
+  if (params.high_yield_only) sp.set("high_yield_only", "true");
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  return apiFetch<ExamFormulaOut[]>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/formulas${qs}`,
+    { token }
+  );
+}
+
+export async function createExamFormula(
+  token: string,
+  examCode: string,
+  payload: {
+    subject_id: string;
+    chapter_id: string;
+    topic_id?: string | null;
+    title: string;
+    formula_latex: string;
+    variables?: FormulaVariableItem[];
+    when_to_use: string;
+    common_pitfall?: string | null;
+    difficulty?: "easy" | "medium" | "hard";
+    is_high_yield?: boolean;
+  }
+): Promise<ExamFormulaOut> {
+  return apiFetch<ExamFormulaOut>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/formulas`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listExamRevisionPlans(
+  token: string,
+  examCode: string
+): Promise<ExamRevisionPlanOut[]> {
+  return apiFetch<ExamRevisionPlanOut[]>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/revision-plans`,
+    { token }
+  );
+}
+
+export async function createExamRevisionPlan(
+  token: string,
+  examCode: string,
+  payload: {
+    title?: string;
+    exam_pattern_id?: string | null;
+    target_exam_date: string;
+    daily_minutes: number;
+    focus_chapter_ids?: string[];
+  }
+): Promise<ExamRevisionPlanOut> {
+  return apiFetch<ExamRevisionPlanOut>(
+    `/api/v1/exam-prep/${encodeURIComponent(examCode)}/revision-plans`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchAttemptDetailedSolutions(
+  token: string,
+  attemptId: string
+): Promise<AttemptDetailedSolutionsResponse> {
+  return apiFetch<AttemptDetailedSolutionsResponse>(
+    `/api/v1/exam-prep/attempts/${encodeURIComponent(attemptId)}/solutions`,
+    { token }
+  );
+}
+
+// ------------------------------------------------------------------
+// Phase 10: Multilingual Learning Expansion
+// ------------------------------------------------------------------
+export async function fetchLanguagePreferences(
+  token: string
+): Promise<UserLanguagePreferencesOut> {
+  return apiFetch<UserLanguagePreferencesOut>("/api/v1/languages/preferences", {
+    token,
+  });
+}
+
+export async function updateLanguagePreferences(
+  token: string,
+  payload: {
+    ui_language?: string;
+    preferred_explanation_language?: string;
+    preferred_voice_language?: string;
+    preferred_subtitle_language?: string;
+    preferred_question_language?: string;
+    preferred_answer_language?: string;
+    bilingual_explanation_mode?: BilingualMode;
+  }
+): Promise<UserLanguagePreferencesOut> {
+  return apiFetch<UserLanguagePreferencesOut>("/api/v1/languages/preferences", {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchLanguageCapability(
+  token: string,
+  languageCode: string,
+  payload: Record<string, unknown>
+): Promise<LanguageCapabilityOut> {
+  return apiFetch<LanguageCapabilityOut>(
+    `/api/v1/languages/capabilities/${encodeURIComponent(languageCode)}`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchUiLocalizationBundle(
+  languageCode: string
+): Promise<UiLocalizationBundleOut> {
+  return apiFetch<UiLocalizationBundleOut>(
+    `/api/v1/languages/ui-bundle/${encodeURIComponent(languageCode)}`
+  );
+}
+
+export async function listMultilingualGlossary(params?: {
+  language_code?: string;
+  subject_area?: string;
+  query?: string;
+}): Promise<GlossaryTermOut[]> {
+  const sp = new URLSearchParams();
+  if (params?.language_code) sp.set("language_code", params.language_code);
+  if (params?.subject_area) sp.set("subject_area", params.subject_area);
+  if (params?.query) sp.set("query", params.query);
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  return apiFetch<GlossaryTermOut[]>(`/api/v1/languages/glossary${qs}`);
+}
+
+export async function upsertMultilingualGlossaryTerm(
+  token: string,
+  payload: {
+    concept_key: string;
+    subject_area: string;
+    english_term: string;
+    language_code: string;
+    localized_term: string;
+    transliteration?: string | null;
+    preserve_english_in_bilingual?: boolean;
+    latex_symbol?: string | null;
+    notes?: string | null;
+  }
+): Promise<GlossaryTermOut> {
+  return apiFetch<GlossaryTermOut>("/api/v1/languages/glossary", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function previewBilingualExplanation(payload: {
+  source_text: string;
+  explanation_language: string;
+  subtitle_language: string;
+  voice_language: string;
+  bilingual_mode: BilingualMode;
+}): Promise<BilingualPreviewResponse> {
+  return apiFetch<BilingualPreviewResponse>("/api/v1/languages/bilingual-preview", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listTranslationEntries(
+  token: string,
+  params?: {
+    target_language_code?: string;
+    status_filter?: string;
+    resource_type?: string;
+  }
+): Promise<TranslationEntryOut[]> {
+  const sp = new URLSearchParams();
+  if (params?.target_language_code) {
+    sp.set("target_language_code", params.target_language_code);
+  }
+  if (params?.status_filter) sp.set("status_filter", params.status_filter);
+  if (params?.resource_type) sp.set("resource_type", params.resource_type);
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  return apiFetch<TranslationEntryOut[]>(`/api/v1/languages/translations${qs}`, {
+    token,
+  });
+}
+
+export async function submitTranslationEntry(
+  token: string,
+  payload: {
+    resource_type:
+      | "ui_string"
+      | "question"
+      | "lesson_segment"
+      | "formula_note"
+      | "concept_summary";
+    resource_key: string;
+    source_language_code?: string;
+    target_language_code: string;
+    source_text: string;
+    translated_text: string;
+    bilingual_text?: string | null;
+  }
+): Promise<TranslationEntryOut> {
+  return apiFetch<TranslationEntryOut>("/api/v1/languages/translations", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reviewTranslationEntry(
+  token: string,
+  entryId: string,
+  payload: {
+    decision: "approved" | "rejected" | "needs_revision";
+    reviewer_notes?: string;
+  }
+): Promise<TranslationEntryOut> {
+  return apiFetch<TranslationEntryOut>(
+    `/api/v1/languages/translations/${encodeURIComponent(entryId)}/review`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listLanguageQualityEvaluations(
+  languageCode?: string
+): Promise<LanguageQualityEvaluationOut[]> {
+  const qs = languageCode
+    ? `?language_code=${encodeURIComponent(languageCode)}`
+    : "";
+  return apiFetch<LanguageQualityEvaluationOut[]>(
+    `/api/v1/languages/evaluations${qs}`
+  );
+}
+
+export async function runLanguageQualityEvaluation(
+  token: string,
+  payload: {
+    language_code: string;
+    modality:
+      | "ui"
+      | "explanation"
+      | "bilingual"
+      | "voice"
+      | "stt"
+      | "subtitle"
+      | "question"
+      | "answer";
+    provider_name?: string;
+    samples?: Array<{
+      sample_id: string;
+      source_text: string;
+      candidate_text: string;
+    }>;
+  }
+): Promise<LanguageQualityEvaluationOut> {
+  return apiFetch<LanguageQualityEvaluationOut>(
+    "/api/v1/languages/evaluations/run",
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchVoiceProviderCapabilities(): Promise<VoiceProviderStatusOut> {
+  return apiFetch<VoiceProviderStatusOut>("/api/v1/voice/capabilities");
+}
+
+export async function transcribeVoiceStt(
+  token: string,
+  payload: {
+    language_code: string;
+    audio_base64?: string | null;
+    mime_type?: string;
+    browser_transcript_hint?: string | null;
+    classroom_session_id?: string | null;
+  }
+): Promise<STTResponseOut> {
+  return apiFetch<STTResponseOut>("/api/v1/voice/stt", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }

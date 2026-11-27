@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     password_argon2_time_cost: int = Field(default=3, ge=2, le=10)
     password_argon2_memory_cost: int = Field(default=65536, ge=16384)
     password_argon2_parallelism: int = Field(default=2, ge=1, le=8)
+    auth_rate_limit_max_attempts: int = Field(default=10, ge=3, le=500)
+    auth_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3600)
 
     # Phase 3 AI Providers, Routing, Quotas & Circuit Breaker (Backend Secrets Only)
     gemini_api_key: SecretStr = Field(default=SecretStr(""))
@@ -92,6 +94,15 @@ class Settings(BaseSettings):
     elevenlabs_model_id: str = Field(default="eleven_multilingual_v2")
     voice_request_timeout_seconds: float = Field(default=20.0, ge=2.0, le=60.0)
 
+    # Phase 6 Homework AI (Upload Security, OCR & Graduated Coaching)
+    homework_max_file_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+    homework_max_total_bytes: int = Field(default=25 * 1024 * 1024, ge=1024)
+    homework_max_pages: int = Field(default=10, ge=1, le=25)
+    homework_ocr_provider: Literal[
+        "auto", "gemini_vision", "openai_vision", "tesseract", "builtin"
+    ] = Field(default="auto")
+    homework_ocr_min_confidence: float = Field(default=0.65, ge=0.0, le=1.0)
+
     @field_validator("cors_allowed_origins")
     @classmethod
     def reject_wildcard_cors_with_credentials(cls, origins: list[str]) -> list[str]:
@@ -103,16 +114,19 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_non_dev_security_invariants(self) -> Settings:
         """Fail fast if staging/production environments boot with insecure defaults."""
-        secret = self.jwt_secret_key.get_secret_value()
-        if len(secret) < 32:
-            raise ValueError("jwt_secret_key must be at least 32 characters.")
-        if self.app_env in {"staging", "production"}:
-            if secret.startswith("dev-only") or "CHANGE_ME" in secret:
-                raise ValueError(
-                    "Staging/production requires an explicit non-default JWT_SECRET_KEY."
-                )
-            if self.debug:
-                raise ValueError("DEBUG=true is forbidden in staging and production.")
+        from src.core.hardening import validate_production_config_invariants
+
+        violations = validate_production_config_invariants(
+            app_env=self.app_env,
+            debug=self.debug,
+            jwt_secret=self.jwt_secret_key.get_secret_value(),
+            database_url=self.database_url,
+            cookie_secure=self.cookie_secure,
+            cors_allowed_origins=self.cors_allowed_origins,
+            trusted_hosts=self.trusted_hosts,
+        )
+        if violations:
+            raise ValueError(" ".join(violations))
         return self
 
 

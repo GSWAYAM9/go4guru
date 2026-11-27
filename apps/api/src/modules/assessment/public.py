@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.assessment.exam_prep_router import exam_prep_router
 from src.modules.assessment.exam_router import assessments_router, quizzes_router
 from src.modules.assessment.models import (
     AssessmentAttempt,
@@ -25,8 +26,8 @@ from src.modules.assessment.service_and_router import (
 )
 
 MODULE_NAME = "assessment"
-MODULE_PHASE = "Phase 1 (Practice) + Phase 2 (Quizzes & Assessments)"
-MODULE_STATUS = "IMPLEMENTED_PHASE_2"
+MODULE_PHASE = "Phase 1 (Practice) + Phase 2 (Quizzes & Assessments) + Phase 9 (Exam Prep Ecosystem)"
+MODULE_STATUS = "IMPLEMENTED_PHASE_9"
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +145,7 @@ __all__ = [
     "StudentProgressContract",
     "assessments_router",
     "bookmarks_router",
+    "exam_prep_router",
     "get_cohort_assessment_metrics",
     "get_student_attempt_evidence",
     "get_student_progress_snapshot",

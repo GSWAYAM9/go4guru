@@ -58,6 +58,9 @@ class UserProfile(TimestampMixin, Base):
     preferred_answer_language: Mapped[str] = mapped_column(
         String(16), server_default=text("'en'"), nullable=False
     )
+    bilingual_explanation_mode: Mapped[str] = mapped_column(
+        String(32), server_default=text("'bilingual_stem_en'"), nullable=False
+    )
 
 
 class Role(UUIDPrimaryKeyMixin, TimestampMixin, Base):

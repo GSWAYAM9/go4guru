@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import time
 from abc import ABC, abstractmethod
@@ -25,6 +26,7 @@ class ProviderInvocationRequest:
     response_json_schema: dict[str, Any] | None = None
     max_tokens: int = 1200
     temperature: float = 0.2
+    inline_media: tuple[tuple[str, bytes], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,9 +149,19 @@ class GeminiProvider(LLMProvider):
         }
         if req.response_json_schema is not None:
             gen_cfg["responseMimeType"] = "application/json"
+        user_parts: list[dict[str, Any]] = [{"text": req.user_prompt}]
+        for mime_type, raw_bytes in req.inline_media:
+            user_parts.append(
+                {
+                    "inline_data": {
+                        "mime_type": mime_type,
+                        "data": base64.b64encode(raw_bytes).decode("ascii"),
+                    }
+                }
+            )
         body = {
             "systemInstruction": {"parts": [{"text": req.system_instruction}]},
-            "contents": [{"role": "user", "parts": [{"text": req.user_prompt}]}],
+            "contents": [{"role": "user", "parts": user_parts}],
             "generationConfig": gen_cfg,
         }
         t0 = time.perf_counter()
@@ -209,13 +221,26 @@ class OpenAIProvider(LLMProvider):
         if not self._api_key:
             raise ProviderCallError(self.name, "OPENAI_API_KEY not configured.")
         model = self.reasoning_model if req.complexity == "reasoning" else self.fast_model
+        if req.inline_media:
+            user_content: Any = [{"type": "text", "text": req.user_prompt}]
+            for mime_type, raw_bytes in req.inline_media:
+                if mime_type.startswith("image/"):
+                    b64 = base64.b64encode(raw_bytes).decode("ascii")
+                    user_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime_type};base64,{b64}"},
+                        }
+                    )
+        else:
+            user_content = req.user_prompt
         payload: dict[str, Any] = {
             "model": model,
             "temperature": req.temperature,
             "max_tokens": req.max_tokens,
             "messages": [
                 {"role": "system", "content": req.system_instruction},
-                {"role": "user", "content": req.user_prompt},
+                {"role": "user", "content": user_content},
             ],
         }
         if req.response_json_schema is not None:

@@ -14,15 +14,23 @@ from src.core.config import get_settings
 from src.core.database import Base
 from src.modules.ai import models as _ai_models  # noqa: F401
 from src.modules.analytics import models as _analytics_models  # noqa: F401
+from src.modules.assessment import exam_prep_models as _exam_prep_models  # noqa: F401
 from src.modules.assessment import models as _assessment_models  # noqa: F401
+from src.modules.billing import models as _billing_models  # noqa: F401
 from src.modules.classroom import models as _classroom_models  # noqa: F401
+from src.modules.classroom import multilingual_models as _multilingual_models  # noqa: F401
 from src.modules.content import models as _content_models  # noqa: F401
 from src.modules.curriculum import models as _curriculum_models  # noqa: F401
+from src.modules.homework import models as _homework_models  # noqa: F401
 from src.modules.identity import models as _identity_models  # noqa: F401
+from src.modules.identity import parent_models as _parent_models  # noqa: F401
 from src.modules.learning import models as _learning_models  # noqa: F401
+from src.modules.mentor import models as _mentor_models  # noqa: F401
 from src.modules.notifications import models as _notifications_models  # noqa: F401
+from src.modules.organization import models as _organization_models  # noqa: F401
 from src.modules.question_bank import models as _question_bank_models  # noqa: F401
 from src.modules.revision import models as _revision_models  # noqa: F401
+from src.modules.teacher import models as _teacher_models  # noqa: F401
 
 config = context.config
 

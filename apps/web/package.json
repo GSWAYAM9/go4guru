@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start -p 3000 -H 0.0.0.0",
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,9 +14,9 @@
     "clean": "node -e \"require('fs').rmSync('.next', {recursive: true, force: true})\""
   },
   "dependencies": {
-    "@go4guru/contracts": "workspace:*",
-    "@go4guru/ui": "workspace:*",
-    "@go4guru/whiteboard-schema": "workspace:*",
+    "@go4guru/contracts": "*",
+    "@go4guru/ui": "*",
+    "@go4guru/whiteboard-schema": "*",
     "katex": "^0.16.21",
     "next": "^15.2.4",
     "react": "^19.0.0",

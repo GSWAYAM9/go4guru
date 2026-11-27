@@ -10,6 +10,7 @@ from uuid import uuid4
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from src.core.hardening import build_api_security_headers
 from src.core.logging import request_id_ctx_var
 
 logger = logging.getLogger("go4guru.http")
@@ -33,12 +34,12 @@ class RequestContextAndSecurityMiddleware(BaseHTTPMiddleware):
             duration_ms = round((time.perf_counter() - start) * 1000, 2)
             request_id_ctx_var.reset(token)
 
+        settings = getattr(request.app.state, "settings", None)
+        app_env = getattr(settings, "app_env", "development")
+
         response.headers["X-Request-ID"] = request_id
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        response.headers["Cache-Control"] = "no-store"
+        for header_name, header_val in build_api_security_headers(app_env).items():
+            response.headers[header_name] = header_val
 
         logger.info(
             "HTTP request completed",

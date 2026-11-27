@@ -33,7 +33,22 @@ PROMPT_VERSIONS: dict[str, str] = {
     "revision": "prompt_revision_v3.1",
 }
 
-SUPPORTED_LANGUAGES: list[str] = ["en", "hi", "ta", "te", "bn", "mr", "kn"]
+SUPPORTED_LANGUAGES: list[str] = [
+    "en",
+    "hi",
+    "bn",
+    "ta",
+    "te",
+    "mr",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "ur",
+    "or",
+    "as",
+    "sa",
+]
 
 _EQ_TERM = r"[A-Za-z0-9\.\(\)]+(?:\s*[\+\-\*\/\^]\s*[A-Za-z0-9\.\(\)]+)*"
 _EQ_EXTRACT_RE = re.compile(rf"({_EQ_TERM}\s*=\s*{_EQ_TERM})")

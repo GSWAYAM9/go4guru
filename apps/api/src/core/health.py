@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel
 
 from src.core.config import Settings, get_settings
+from src.core.hardening import PLATFORM_PHASE
 
 router = APIRouter(tags=["health"])
 
@@ -62,7 +63,7 @@ async def evaluate_readiness(request: Request) -> tuple[int, ReadinessResponse]:
         service=settings.app_name,
         version=settings.app_version,
         environment=settings.app_env,
-        phase="phase_5_adaptive_learning_and_revision",
+        phase=PLATFORM_PHASE,
         checks={
             "postgres": DependencyStatus(status="up" if db_ok else "down", error=db_err),
             "redis": DependencyStatus(status="up" if redis_ok else "down", error=redis_err),
@@ -83,7 +84,7 @@ async def liveness(request: Request) -> LivenessResponse:
         service=settings.app_name,
         version=settings.app_version,
         environment=settings.app_env,
-        phase="phase_5_adaptive_learning_and_revision",
+        phase=PLATFORM_PHASE,
         timestamp=_utc_now_iso(),
     )
 

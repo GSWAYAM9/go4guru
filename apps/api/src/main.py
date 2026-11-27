@@ -9,10 +9,12 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from src.core.config import Settings, get_settings
 from src.core.database import DatabaseManager
 from src.core.errors import register_exception_handlers
+from src.core.hardening import PLATFORM_PHASE
 from src.core.health import router as health_router
 from src.core.logging import configure_logging
 from src.core.middleware import RequestContextAndSecurityMiddleware
@@ -23,24 +25,36 @@ from src.modules.analytics.public import analytics_router
 from src.modules.assessment.public import (
     assessments_router,
     bookmarks_router,
+    exam_prep_router,
     notes_router,
     practice_router,
     quizzes_router,
 )
+from src.modules.billing.public import billing_router
 from src.modules.classroom.public import (
     classroom_router,
     classroom_ws_router,
     languages_router,
+    voice_multilingual_router,
     voice_router,
     whiteboard_router,
 )
 from src.modules.content.public import rights_router
 from src.modules.curriculum.public import curriculum_router
-from src.modules.identity.public import admin_identity_router, auth_router, users_router
+from src.modules.homework.public import homework_router
+from src.modules.identity.public import (
+    admin_identity_router,
+    auth_router,
+    parent_router,
+    users_router,
+)
 from src.modules.learning.public import dashboard_router, learning_router
+from src.modules.mentor.public import mentor_router
 from src.modules.notifications.public import notifications_router
+from src.modules.organization.public import organization_router
 from src.modules.question_bank.public import imports_router, questions_router
 from src.modules.revision.public import revision_router
+from src.modules.teacher.public import teacher_router
 
 logger = logging.getLogger("go4guru.app")
 
@@ -76,32 +90,39 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.db = db
     app.state.redis = redis
 
-    logger.info("Go4Guru API Phase 0 lifespan started", extra={"event": "startup"})
+    logger.info("Go4Guru API lifespan started", extra={"event": "startup", "phase": PLATFORM_PHASE})
     try:
         yield
     finally:
         await redis.close()
         await db.dispose()
-        logger.info("Go4Guru API Phase 0 lifespan stopped", extra={"event": "shutdown"})
+        logger.info("Go4Guru API lifespan stopped", extra={"event": "shutdown", "phase": PLATFORM_PHASE})
 
 
 def create_app(settings_override: Settings | None = None) -> FastAPI:
     """Construct the FastAPI application with versioned boundaries and security baseline."""
     settings = settings_override or get_settings()
+    expose_docs = settings.app_env != "production"
 
     application = FastAPI(
         title="Go4Guru Platform API",
         version=settings.app_version,
         description=(
-            "Multilingual AI Learning Ecosystem API (Phase 0 Foundation). "
-            "Domain endpoints activate progressively in Phases 1-12."
+            "Multilingual AI Learning Ecosystem API. "
+            "Production-hardened modular monolith serving Classes 6-12."
         ),
-        openapi_url="/api/v1/openapi.json",
-        docs_url="/api/v1/docs",
-        redoc_url="/api/v1/redoc",
+        openapi_url="/api/v1/openapi.json" if expose_docs else None,
+        docs_url="/api/v1/docs" if expose_docs else None,
+        redoc_url="/api/v1/redoc" if expose_docs else None,
         lifespan=lifespan,
     )
     application.state.settings = settings
+
+    if settings.app_env in {"staging", "production"}:
+        application.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=settings.trusted_hosts,
+        )
 
     application.add_middleware(
         CORSMiddleware,
@@ -109,7 +130,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
     application.add_middleware(RequestContextAndSecurityMiddleware)
     register_exception_handlers(application)
@@ -125,6 +146,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(practice_router)
     application.include_router(quizzes_router)
     application.include_router(assessments_router)
+    application.include_router(exam_prep_router)
     application.include_router(notes_router)
     application.include_router(bookmarks_router)
     application.include_router(dashboard_router)
@@ -138,19 +160,26 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(classroom_router)
     application.include_router(whiteboard_router)
     application.include_router(voice_router)
+    application.include_router(voice_multilingual_router)
+    application.include_router(homework_router)
+    application.include_router(parent_router)
+    application.include_router(teacher_router)
+    application.include_router(mentor_router)
+    application.include_router(organization_router)
+    application.include_router(billing_router)
 
     api_v1 = APIRouter(prefix="/api/v1", tags=["v1"])
 
     @api_v1.get("/meta", response_model=ApiMetaResponse)
     async def api_meta() -> ApiMetaResponse:
-        """Return API versioning, Phase 4 active domain registry, and rollout status."""
+        """Return API versioning, active domain registry, and rollout status."""
         return ApiMetaResponse(
             service=settings.app_name,
             version=settings.app_version,
             environment=settings.app_env,
             api_prefix="/api/v1",
             ws_prefix="/ws/v1",
-            phase="phase_5_adaptive_learning_and_revision",
+            phase=PLATFORM_PHASE,
             modules=[
                 ModuleBoundaryInfo(
                     name=descriptor.name,

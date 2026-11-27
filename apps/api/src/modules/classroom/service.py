@@ -64,6 +64,9 @@ class ClassroomConnectionManager:
 
     async def connect(self, session_id: UUID, ws: WebSocket) -> None:
         await ws.accept()
+        self.register(session_id, ws)
+
+    def register(self, session_id: UUID, ws: WebSocket) -> None:
         self._sockets.setdefault(session_id, set()).add(ws)
 
     def disconnect(self, session_id: UUID, ws: WebSocket) -> None:
@@ -852,6 +855,14 @@ class ClassroomService:
         )
 
     def read_cached_audio_bytes(self, filename: str) -> bytes:
+        from src.core.hardening import is_safe_audio_cache_filename
+
+        if not is_safe_audio_cache_filename(filename):
+            raise AppError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="INVALID_AUDIO_FILENAME",
+                message="Requested cached audio filename is invalid.",
+            )
         try:
             return self.voice_adapter.read_cached_audio(f"voice_cache/{filename}")
         except (FileNotFoundError, ValueError) as exc:

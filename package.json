@@ -2,17 +2,22 @@
   "name": "go4guru-monorepo",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@12.3.4",
   "engines": {
-    "node": ">=22.0.0",
-    "pnpm": ">=10.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
-    "dev:web": "pnpm --filter @go4guru/web dev",
-    "build": "pnpm --filter @go4guru/contracts build && pnpm --filter @go4guru/whiteboard-schema build && pnpm --filter @go4guru/ui build && pnpm --filter @go4guru/web build",
-    "lint": "pnpm -r --if-present lint",
-    "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
-    "clean": "pnpm -r --if-present clean"
-  }
+    "build:packages": "npm run build --workspace=@go4guru/contracts && npm run build --workspace=@go4guru/whiteboard-schema && npm run build --workspace=@go4guru/ui",
+    "dev": "npm run build:packages && npm run dev --workspace=@go4guru/web",
+    "dev:web": "npm run dev",
+    "start": "npm run start --workspace=@go4guru/web",
+    "build": "npm run build:packages && npm run build --workspace=@go4guru/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ]
 }
